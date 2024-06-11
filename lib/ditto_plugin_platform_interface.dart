@@ -30,4 +30,5 @@ abstract class DittoPluginPlatform extends PlatformInterface {
   Future<bool> delete(String documentId);
   
   Future<List<dynamic>> getAllTasks();
+  
 }

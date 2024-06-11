@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ditto_plugin/ditto_plugin.dart';
 import 'package:ditto_plugin_example/model/task.dart';
 import 'package:ditto_plugin_example/presentation/edit_task.dart';
@@ -22,12 +24,34 @@ class _HomePageState extends State<HomePage> {
     _fetchTasks();
   }
 
+  // Future<void> _fetchTasks() async {
+  //   try {
+  //     final fetchedTasks = await _dittoPlugin.getAllTasks();
+  //     final mappedTasks =
+  //         fetchedTasks.map((taskData) => Task.fromJson(taskData)).toList();
+  //     setState(() {
+  //       tasks = mappedTasks;
+  //     });
+  //     logger.i("Tasks fetched successfully: ${tasks.length} tasks.");
+  //   } catch (e) {
+  //     logger.i("Error fetching tasks: $e");
+  //   }
+  // }
+
   Future<void> _fetchTasks() async {
     try {
       final fetchedTasks = await _dittoPlugin.getAllTasks();
-      final mappedTasks = fetchedTasks
-          .map((taskData) => Task.fromMap(taskData as Map<String, dynamic>))
-          .toList();
+
+      final mappedTasks = fetchedTasks.map((taskData) {
+        // Chuyển đổi "true"/"false" thành bool
+        final isCompleted = taskData['isCompleted'] == 'true';
+
+        return Task.fromJson({
+          ...taskData,
+          'isCompleted': isCompleted,
+        });
+      }).toList();
+
       setState(() {
         tasks = mappedTasks;
       });
@@ -57,7 +81,7 @@ class _HomePageState extends State<HomePage> {
                 },
                 onDelete: (taskId) async {
                   await _dittoPlugin.delete(taskId);
-                  _fetchTasks(); // Refresh tasks
+                  _fetchTasks();
                 },
               ),
             ),
@@ -92,22 +116,30 @@ class _HomePageState extends State<HomePage> {
                   builder: (context) => EditTaskScreen(
                     task: task,
                     onSave: (updatedTask) async {
-                      await _dittoPlugin.save(
-                        documentId: updatedTask.id,
-                        body: updatedTask.body,
-                        isCompleted: updatedTask.isCompleted,
-                      );
-                      logger.i('Task saved in HomePage');
-                      _fetchTasks();
+                      try {
+                        await _dittoPlugin.save(
+                          documentId: updatedTask.id,
+                          body: updatedTask.body,
+                          isCompleted: updatedTask.isCompleted,
+                        );
+                        logger.i('Task saved in HomePage');
+                      } catch (e) {
+                        logger.i('Error saving task in HomePage: $e');
+                      }
+                      // await _dittoPlugin.save(
+                      //   documentId: updatedTask.id,
+                      //   body: updatedTask.body,
+                      //   isCompleted: updatedTask.isCompleted,
+                      // );
+                      // logger.i('Task saved in HomePage');
                     },
                     onDelete: (taskId) async {
                       await _dittoPlugin.delete(taskId);
                       logger.i('Task deleted in HomePage');
-                      _fetchTasks();
                     },
                   ),
                 ),
-              );
+              ).then((_) => _fetchTasks());
             },
             leading: Checkbox(
               value: task.isCompleted,

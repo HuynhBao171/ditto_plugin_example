@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -55,7 +57,22 @@ class MethodChannelDittoPlugin extends DittoPluginPlatform {
     try {
       final result = await methodChannel.invokeMethod('getAllTasks');
       print("Tasks retrieved successfully: $result");
-      return result as List<dynamic>;
+      final jsonString = result
+          .replaceAll("{", '{"')
+          .replaceAll("=", '": "')
+          .replaceAll(", ", '", "')
+          .replaceAll("}", '"}')
+          .replaceAll('"_id"', '"id"');
+
+      final List<dynamic> tasksData = jsonDecode(jsonString) as List<dynamic>;
+
+      final List<dynamic> filteredTasks = tasksData.map((task) {
+        final Map<String, dynamic> taskMap = Map<String, dynamic>.from(task);
+        taskMap.remove('isDeleted');
+        return taskMap;
+      }).toList();
+
+      return filteredTasks;
     } on PlatformException catch (e) {
       print("Error retrieving tasks: ${e.message}");
       return [];

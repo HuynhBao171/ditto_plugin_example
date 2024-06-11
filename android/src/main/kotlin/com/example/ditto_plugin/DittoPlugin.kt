@@ -58,34 +58,6 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
     result.success(true)
   }
 
-  private fun setupWithDocument(call: MethodCall, result: Result) {
-    val collectionName = call.argument<String>("collectionName") ?: ""
-    val documentId = call.argument<String>("documentId") ?: ""
-
-    if (collectionName.isBlank() || documentId.isBlank()) {
-      result.error("ERROR", "Missing collectionName or documentId", null)
-      return
-    }
-
-    val doc = ditto.store[collectionName]
-      .findById(DittoDocumentId(documentId))
-      .exec()
-
-    ditto.store.collection(collectionName)
-      .upsert(mapOf(
-        "body" to "test",
-        "isCompleted" to false,
-        "isDeleted" to false
-      ))
-
-    if (doc != null) {
-      result.success(doc)
-    } else {
-      result.error("ERROR", "Document not found", null)
-    }
-  }
-
-
   private fun save(call: MethodCall) {
     val documentId = call.argument<String>("documentId") ?: ""
     val body = call.argument<String>("body") ?: ""
@@ -113,12 +85,6 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
           }
       }
     }
-
-    ditto.store.collection("tasks").findById(DittoDocumentId(documentId)).subscribe()
-
-    ditto.store.collection("tasks").findById(DittoDocumentId(documentId)).observeLocal{ docs, events ->
-      println("debug docs $docs")
-      println("debug events $events")}
   }
 
   private fun delete(call: MethodCall, result: Result) {
@@ -133,14 +99,19 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
   private fun getAllTasks(result: Result) {
     val tasksCollection = ditto.store["tasks"]
 
+    var hasReplied = false
+
     tasksCollection
       .find("!isDeleted")
       .sort("createdOn", DittoSortDirection.Ascending)
       .observeLocal { docs, _ ->
-        val tasks = docs.map { document ->
-          Task(document)
+        if (!hasReplied) {
+          val jsonString = docs.joinToString(separator = ",") { document ->
+            document.value.toString()
+          }
+          result.success("[$jsonString]")
+          hasReplied = true // Đánh dấu đã gửi phản hồi
         }
-        result.success(tasks)
       }
   }
 
