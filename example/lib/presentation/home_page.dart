@@ -24,20 +24,6 @@ class _HomePageState extends State<HomePage> {
     _fetchTasks();
   }
 
-  // Future<void> _fetchTasks() async {
-  //   try {
-  //     final fetchedTasks = await _dittoPlugin.getAllTasks();
-  //     final mappedTasks =
-  //         fetchedTasks.map((taskData) => Task.fromJson(taskData)).toList();
-  //     setState(() {
-  //       tasks = mappedTasks;
-  //     });
-  //     logger.i("Tasks fetched successfully: ${tasks.length} tasks.");
-  //   } catch (e) {
-  //     logger.i("Error fetching tasks: $e");
-  //   }
-  // }
-
   Future<void> _fetchTasks() async {
     try {
       final fetchedTasks = await _dittoPlugin.getAllTasks();
@@ -77,15 +63,15 @@ class _HomePageState extends State<HomePage> {
                     body: updatedTask.body,
                     isCompleted: updatedTask.isCompleted,
                   );
-                  _fetchTasks();
+                  logger.i('Task saved in HomePage');
                 },
                 onDelete: (taskId) async {
                   await _dittoPlugin.delete(taskId);
-                  _fetchTasks();
+                  logger.i('Task deleted in HomePage');
                 },
               ),
             ),
-          );
+          ).then((_) => _fetchTasks());
         },
         label: const Row(
           children: <Widget>[
@@ -116,22 +102,12 @@ class _HomePageState extends State<HomePage> {
                   builder: (context) => EditTaskScreen(
                     task: task,
                     onSave: (updatedTask) async {
-                      try {
-                        await _dittoPlugin.save(
-                          documentId: updatedTask.id,
-                          body: updatedTask.body,
-                          isCompleted: updatedTask.isCompleted,
-                        );
-                        logger.i('Task saved in HomePage');
-                      } catch (e) {
-                        logger.i('Error saving task in HomePage: $e');
-                      }
-                      // await _dittoPlugin.save(
-                      //   documentId: updatedTask.id,
-                      //   body: updatedTask.body,
-                      //   isCompleted: updatedTask.isCompleted,
-                      // );
-                      // logger.i('Task saved in HomePage');
+                      await _dittoPlugin.save(
+                        documentId: updatedTask.id,
+                        body: updatedTask.body,
+                        isCompleted: updatedTask.isCompleted,
+                      );
+                      logger.i('Task saved in HomePage');
                     },
                     onDelete: (taskId) async {
                       await _dittoPlugin.delete(taskId);
@@ -143,10 +119,29 @@ class _HomePageState extends State<HomePage> {
             },
             leading: Checkbox(
               value: task.isCompleted,
-              onChanged: (value) {
-                setState(() {
-                  task.isCompleted = value!;
-                });
+              onChanged: (value) async {
+                if (value != null) {
+                  setState(() {
+                    task.isCompleted = value;
+                  });
+                  try {
+                    await _dittoPlugin.save(
+                      documentId: task.id,
+                      body: task.body,
+                      isCompleted: value,
+                    );
+                  } catch (e) {
+                    logger.e("Error saving task: $e");
+
+                    setState(() {
+                      task.isCompleted = !value;
+                    });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Error saving task")),
+                    );
+                  }
+                }
               },
             ),
             title: Text(

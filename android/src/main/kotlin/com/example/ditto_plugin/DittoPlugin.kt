@@ -14,6 +14,7 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
   private lateinit var channel: MethodChannel
   private lateinit var ditto: Ditto
   private lateinit var binding: FlutterPlugin.FlutterPluginBinding
+  private lateinit var tasksSubscription: DittoSubscription
 
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "ditto_plugin")
@@ -98,6 +99,7 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
 
   private fun getAllTasks(result: Result) {
     val tasksCollection = ditto.store["tasks"]
+    ditto.sync.registerSubscription("SELECT * FROM tasks")
 
     var hasReplied = false
 
@@ -110,9 +112,11 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
             document.value.toString()
           }
           result.success("[$jsonString]")
-          hasReplied = true // Đánh dấu đã gửi phản hồi
+          hasReplied = true
         }
       }
+//    tasksSubscription = tasksCollection.findAll().subscribe()
+//    tasksSubscription = tasksCollection.find("body == 'A31 2h09'").subscribe()
   }
 
 }
