@@ -8,6 +8,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import live.ditto.*
 import live.ditto.android.DefaultAndroidDittoDependencies
+import live.ditto.transports.DittoSyncPermissions
 
 /** DittoPlugin */
 class DittoPlugin: FlutterPlugin, MethodCallHandler {
@@ -53,8 +54,9 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
       enableDittoCloudSync = true
     ))
 
-    DittoLogger.minimumLogLevel = DittoLogLevel.INFO
+    DittoLogger.minimumLogLevel = DittoLogLevel.DEBUG
     ditto.startSync()
+    ditto.disableSyncWithV3()
 
     result.success(true)
   }

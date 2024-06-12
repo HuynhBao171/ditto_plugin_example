@@ -69,5 +69,7 @@ android {
 
 dependencies {
     implementation("live.ditto:ditto:4.7.1")
+
+    implementation fileTree(dir: "${rootDir}/android-libs", include: ["*.aar"])
 }
 
