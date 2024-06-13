@@ -21,26 +21,22 @@ class DittoPluginWeb extends DittoPluginPlatform {
     throw UnimplementedError();
   }
 
-  // Loại bỏ setupWithDocument
-
   @override
-  Future<void> save(
-      {String? documentId, required String body, required bool isCompleted}) {
+  Future<bool> deleteMessage(String messageId) {
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> delete(String documentId) {
+  Future<void> sendMessage(
+      {String? messageId,
+      required String content,
+      required String createdAt,
+      required String senderName}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<List<dynamic>> getAllTasks() {
-    throw UnimplementedError();
-  }
-
-  @override
-  Stream<List> streamAllTasks() {
+  Stream<List> streamAllMessages() {
     throw UnimplementedError();
   }
 }

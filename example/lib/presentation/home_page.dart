@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:io';
 
 import 'package:ditto_plugin/ditto_plugin.dart';
-import 'package:ditto_plugin_example/model/task.dart';
-import 'package:ditto_plugin_example/presentation/edit_task.dart';
+import 'package:ditto_plugin_example/model/message.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
@@ -16,55 +17,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Task> tasks = [];
   final _dittoPlugin = DittoPlugin();
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  final TextEditingController _messageController = TextEditingController();
+  final List<Message> _messages = [];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EditTaskScreen(
-                task: Task(id: '', body: '', isCompleted: false),
-                onSave: (updatedTask) async {
-                  await _dittoPlugin.save(
-                    documentId: updatedTask.id,
-                    body: updatedTask.body,
-                    isCompleted: updatedTask.isCompleted,
-                  );
-                  logger.i('Task saved in HomePage');
-                },
-                onDelete: (taskId) async {
-                  await _dittoPlugin.delete(taskId);
-                  logger.i('Task deleted in HomePage');
-                },
-              ),
-            ),
-          );
-        },
-        label: const Row(
-          children: <Widget>[
-            Icon(Icons.add),
-            SizedBox(width: 2),
-            Text("Add new task"),
-          ],
-        ),
-      ),
       appBar: AppBar(
-        title: const Text('Ditto Tasks'),
+        title: const Text('Ditto Chat'),
         actions: [
           IconButton(
             onPressed: _showDittoSettingsModal,
@@ -72,93 +33,168 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: StreamBuilder<List<dynamic>>(
-        stream: _dittoPlugin.streamAllTasks(),
+      body: FutureBuilder<String>(
+        future: _getDeviceName(),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            final fetchedTasks = snapshot.data!;
-            tasks = fetchedTasks.map((taskData) {
-              final isCompleted = taskData['isCompleted'] == 'true';
-              return Task.fromJson({
-                ...taskData,
-                'isCompleted': isCompleted,
-              });
-            }).toList();
+            final deviceName = snapshot.data!;
 
-            return ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return ListTile(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditTaskScreen(
-                          task: task,
-                          onSave: (updatedTask) async {
-                            await _dittoPlugin.save(
-                              documentId: updatedTask.id,
-                              body: updatedTask.body,
-                              isCompleted: updatedTask.isCompleted,
-                            );
-                            logger.i('Task saved in HomePage');
+            return Column(
+              children: [
+                Expanded(
+                  child: StreamBuilder<List<dynamic>>(
+                    stream: _dittoPlugin.streamAllMessages(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final fetchedMessages = snapshot.data!;
+                        _messages.clear();
+                        _messages.addAll(fetchedMessages.map((messageData) {
+                          final createdAt = messageData['createdAt'];
+                          return Message.fromJson({
+                            ...messageData,
+                            'createdAt': createdAt,
+                          });
+                        }).toList());
+
+                        return ListView.builder(
+                          reverse: true,
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
+                            final message =
+                                _messages[_messages.length - index - 1];
+                            return _buildMessageBubble(message, deviceName);
                           },
-                          onDelete: (taskId) async {
-                            await _dittoPlugin.delete(taskId);
-                            logger.i('Task deleted in HomePage');
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  leading: Checkbox(
-                    value: task.isCompleted,
-                    onChanged: (value) async {
-                      if (value != null) {
-                        setState(() {
-                          task.isCompleted = value;
-                        });
-                        // try {
-                        //   await _dittoPlugin.save(
-                        //     documentId: task.id,
-                        //     body: task.body,
-                        //     isCompleted: value,
-                        //   );
-                        // } catch (e) {
-                        //   logger.e("Error saving task: $e");
-
-                        //   setState(() {
-                        //     task.isCompleted = !value;
-                        //   });
-
-                        //   ScaffoldMessenger.of(context).showSnackBar(
-                        //     const SnackBar(content: Text("Error saving task")),
-                        //   );
-                        // }
+                        );
+                      } else if (snapshot.hasError) {
+                        logger.e(
+                            "Error listening to messages: ${snapshot.error}");
+                        return const Center(
+                            child: Text("Error loading messages"));
+                      } else {
+                        return const Center(child: CircularProgressIndicator());
                       }
                     },
                   ),
-                  title: Text(
-                    task.body,
-                    style: TextStyle(
-                      decoration: task.isCompleted
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                );
-              },
+                ),
+                _buildMessageInput(deviceName),
+              ],
             );
           } else if (snapshot.hasError) {
-            logger.e("Error listening to tasks: ${snapshot.error}");
-            return const Center(child: Text("Error loading tasks"));
+            logger.e("Error getting device name: ${snapshot.error}");
+            return const Center(child: Text("Error getting device name"));
           } else {
             return const Center(child: CircularProgressIndicator());
           }
         },
       ),
     );
+  }
+
+  Widget _buildMessageBubble(Message message, String deviceName) {
+    final isMe = message.senderName == deviceName;
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: const EdgeInsets.only(left: 16, right: 16, top: 4, bottom: 4),
+        decoration: BoxDecoration(
+          color: isMe ? Colors.blue : Colors.grey[300],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message.senderName,
+              style: TextStyle(
+                fontSize: 12,
+                color: isMe ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message.content,
+              style: TextStyle(
+                color: isMe ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message.createdAt,
+              style: TextStyle(
+                fontSize: 10,
+                color: isMe ? Colors.white : Colors.black,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageInput(String deviceName) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              decoration: const InputDecoration(hintText: 'Enter message'),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.send),
+            onPressed: () {
+              final content = _messageController.text.trim();
+              if (content.isNotEmpty) {
+                _sendMessage(content, deviceName);
+                _messageController.clear();
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String> _getDeviceName() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    String deviceName = 'Unknown Device';
+
+    try {
+      if (Platform.isAndroid) {
+        AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+        deviceName = androidInfo.model;
+      } else if (Platform.isIOS) {
+        IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+        deviceName = iosInfo.name;
+      }
+      logger.i('Device name obtained: $deviceName');
+    } catch (e) {
+      logger.e('Error getting device name: $e');
+    }
+    return deviceName;
+  }
+
+  Future<void> _sendMessage(String content, String deviceName) async {
+    final message = Message(
+      id: '',
+      content: content,
+      createdAt: DateFormat('HH:mm').format(DateTime.now()),
+      senderName: deviceName,
+    );
+    try {
+      await _dittoPlugin.sendMessage(
+        messageId: message.id,
+        content: message.content,
+        createdAt: message.createdAt,
+        senderName: message.senderName,
+      );
+    } catch (e) {
+      logger.e('Failed to send message: $e');
+    }
   }
 
   void _showDittoSettingsModal() {

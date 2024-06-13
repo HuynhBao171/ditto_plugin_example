@@ -25,12 +25,14 @@ abstract class DittoPluginPlatform extends PlatformInterface {
 
   Future<void> initializeDitto(String appId, String token);
 
-  Future<void> save(
-      {String? documentId, required String body, required bool isCompleted});
+  Future<void> sendMessage({
+    String? messageId,
+    required String content,
+    required String createdAt,
+    required String senderName,
+  });
 
-  Future<bool> delete(String documentId);
+  Future<bool> deleteMessage(String messageId);
 
-  Future<List<dynamic>> getAllTasks();
-
-  Stream<List<dynamic>> streamAllTasks();
+  Stream<List<dynamic>> streamAllMessages();
 }

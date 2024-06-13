@@ -7,61 +7,27 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 class MockDittoPluginPlatform
     with MockPlatformInterfaceMixin
     implements DittoPluginPlatform {
-  Future<String?> getPlatformVersion() => Future.value('42');
-
-  Future<void> createDocument(
-      String collectionName, Map<String, dynamic> data) {
-    // TODO: implement createDocument
+  @override
+  Future<bool> deleteMessage(String messageId) {
     throw UnimplementedError();
   }
 
-  Future<void> deleteDocument(String collectionName, String documentId) {
-    // TODO: implement deleteDocument
-    throw UnimplementedError();
-  }
-
+  @override
   Future<void> initializeDitto(String appId, String token) {
-    // TODO: implement initializeDitto
-    throw UnimplementedError();
-  }
-
-  Future<bool> delete(String documentId) {
-    // TODO: implement delete
-    throw UnimplementedError();
-  }
-
-  Future<List> getAllTasks() {
-    // TODO: implement getAllTasks
-    throw UnimplementedError();
-  }
-
-  Future<void> save(
-      {String? documentId, required String body, required bool isCompleted}) {
-    // TODO: implement save
     throw UnimplementedError();
   }
 
   @override
-  Stream<List> liveQueryStream(String collectionName) {
-    // TODO: implement liveQueryStream
+  Future<void> sendMessage(
+      {String? messageId,
+      required String content,
+      required String createdAt,
+      required String senderName}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> startLiveQuery(String collectionName, String query) {
-    // TODO: implement startLiveQuery
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> stopLiveQuery(String collectionName) {
-    // TODO: implement stopLiveQuery
-    throw UnimplementedError();
-  }
-
-  @override
-  Stream<List> streamAllTasks() {
-    // TODO: implement streamAllTasks
+  Stream<List> streamAllMessages() {
     throw UnimplementedError();
   }
 }

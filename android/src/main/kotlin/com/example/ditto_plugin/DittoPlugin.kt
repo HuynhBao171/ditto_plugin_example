@@ -3,7 +3,6 @@ package com.example.ditto_plugin
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.ditto_plugin.data.Task
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
@@ -19,7 +18,6 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
   private lateinit var channel: MethodChannel
   private lateinit var ditto: Ditto
   private lateinit var binding: FlutterPlugin.FlutterPluginBinding
-  private lateinit var tasksSubscription: DittoSubscription
   private val eventSink = mutableListOf<EventChannel.EventSink?>()
 
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -28,14 +26,14 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
     channel.setMethodCallHandler(this)
     binding = flutterPluginBinding
 
-    // Khởi tạo EventChannel cho streamAllTasks
-    val eventChannel = EventChannel(binding.binaryMessenger, "ditto_plugin/tasks")
+    // Khởi tạo EventChannel cho streamAllMessages
+    val eventChannel = EventChannel(binding.binaryMessenger, "ditto_plugin/chat")
     eventChannel.setStreamHandler(
       object : EventChannel.StreamHandler {
         override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
           Log.d("DittoPlugin", "EventChannel onListen called")
           eventSink.add(events)
-          startObservingTasks()
+          startObservingMessages()
         }
 
         override fun onCancel(arguments: Any?) {
@@ -47,13 +45,12 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
     )
   }
 
-  override fun onMethodCall( call: MethodCall, result: Result) {
+  override fun onMethodCall(call: MethodCall, result: Result) {
     Log.d("DittoPlugin", "onMethodCall called, method: ${call.method}")
     when (call.method) {
       "initializeDitto" -> initializeDitto(call, result)
-      "save" -> save(call)
-      "delete" -> delete(call, result)
-      "getAllTasks" -> getAllTasks(result)
+      "sendMessage" -> sendMessage(call)
+      "deleteMessage" -> deleteMessage(call, result)
       else -> result.notImplemented()
     }
   }
@@ -89,121 +86,69 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
     result.success(true)
   }
 
-  private fun save(call: MethodCall) {
-    Log.d("DittoPlugin", "save called")
-    val documentId = call.argument<String>("documentId") ?: ""
-    val body = call.argument<String>("body") ?: ""
-    val isCompleted = call.argument<Boolean>("isCompleted") ?: false
+  private fun sendMessage(call: MethodCall) {
+    Log.d("DittoPlugin", "sendMessage called")
+    val documentId = call.argument<String>("messageId") ?: ""
+    val content = call.argument<String>("content") ?: ""
+    val createdAt = call.argument<String>("createdAt") ?: ""
+    val senderName = call.argument<String>("senderName") ?: ""
 
-    val doc = ditto.store["tasks"]
-      .findById(DittoDocumentId(documentId))
-      .exec()
-    if (doc == null) {
-      if (documentId == "") {
-        ditto.store.collection("tasks")
-          .upsert(
-            mapOf(
-              "body" to body,
-              "isCompleted" to isCompleted,
-              "isDeleted" to false
-            )
-          )
-      } else {
-        ditto.store.collection("tasks").findById(DittoDocumentId(documentId))
-          .update { dittoDocument ->
-            val mutableDoc = dittoDocument ?: return@update
-            mutableDoc["body"].set(body)
-            mutableDoc["isCompleted"].set(isCompleted)
-          }
-      }
-    }
-    Log.d("DittoPlugin", "Task saved: documentId: $documentId, body: $body, isCompleted: $isCompleted")
+    ditto.store.collection("chat").upsert(
+      mapOf(
+        "id" to documentId,
+        "content" to content,
+        "createdAt" to createdAt,
+        "senderName" to senderName,
+        "isDeleted" to false
+      )
+    )
+    Log.d("DittoPlugin", "Message saved: messageId: $documentId, content: $content, createdAt: $createdAt, senderName: $senderName")
   }
 
-  private fun delete(call: MethodCall, result: Result) {
-    Log.d("DittoPlugin", "delete called")
-    val documentId = call.argument<String>("documentId") ?: ""
-    if (documentId.isBlank()) {
-      result.error("ERROR", "Missing documentId", null)
+  private fun deleteMessage(call: MethodCall, result: Result) {
+    Log.d("DittoPlugin", "deleteMessage called")
+    val messageId = call.argument<String>("messageId") ?: ""
+    if (messageId.isBlank()) {
+      result.error("ERROR", "Missing messageId", null)
       return
     }
-    ditto.store.collection("tasks").findById(documentId).remove()
-    Log.d("DittoPlugin", "Task deleted: documentId: $documentId")
+    ditto.store.collection("chat").findById(messageId).remove()
+    Log.d("DittoPlugin", "Message deleted: messageId: $messageId")
   }
 
-  private fun getAllTasks(result: Result) {
-    Log.d("DittoPlugin", "getAllTasks called")
-    val tasksCollection = ditto.store["tasks"]
-    ditto.sync.registerSubscription("SELECT * FROM tasks")
+  private fun startObservingMessages() {
+    val messagesCollection = ditto.store["chat"]
+    ditto.sync.registerSubscription("SELECT * FROM chat")
 
-    tasksCollection
-      .find("!isDeleted")
-      .sort("createdOn", DittoSortDirection.Ascending)
-      .observeLocal { docs, _ ->
-        Log.d("DittoPlugin", "getAllTasks observeLocal called, docs: $docs")
-        val jsonString = docs.joinToString(separator = ",") { document ->
-          document.value.toString()
-        }
-        result.success("[$jsonString]")
-      }
-
-  }
-
-//  private fun streamAllTasks() {
-//    Log.d("DittoPlugin", "streamAllTasks called")
-//    val tasksCollection = ditto.store["tasks"]
-//    ditto.sync.registerSubscription("SELECT * FROM tasks")
-//
-//    tasksCollection
-//      .find("!isDeleted")
-//      .sort("createdOn", DittoSortDirection.Ascending)
-//      .observeLocal { docs, _ ->
-//        try {
-//          Log.d("DittoPlugin", "streamAllTasks observeLocal called, docs: $docs")
-//          val jsonString = docs.joinToString(separator = ",") { document ->
-//            document.value.toString()
-//          }
-//          eventSink.forEach { it?.success("[$jsonString]") }
-//        } catch (e: Exception) {
-//          Log.e("DittoPlugin", "Error in streamAllTasks observeLocal: ", e)
-//          eventSink.forEach { it?.error("ERROR", e.message, null) }
-//        }
-//      }
-//  }
-
-  private fun startObservingTasks() {
-    val tasksCollection = ditto.store["tasks"]
-    ditto.sync.registerSubscription("SELECT * FROM tasks")
-
-    tasksCollection
+    messagesCollection
       .find("!isDeleted")
       .sort("createdOn", DittoSortDirection.Ascending)
       .observeLocal { docs, _ ->
         try {
-          Log.d("DittoPlugin", "streamAllTasks observeLocal called, docs: $docs")
-//          val gson = Gson()
-//          val jsonString = gson.toJson(docs)
+          Log.d("DittoPlugin", "streamAllMessages observeLocal called, docs: $docs")
           val jsonString = StringBuilder().apply {
+            append("[")
             docs.forEachIndexed { index, document ->
               append("{")
               append("\"id\": \"${document.id}\",")
-              append("\"body\": \"${document.value["body"]}\",")
-              append("\"isCompleted\": \"${document.value["isCompleted"]}\"")
+              append("\"content\": \"${document.value["content"]}\",")
+              append("\"createdAt\": \"${document.value["createdAt"]}\",")
+              append("\"senderName\": \"${document.value["senderName"]}\"")
               append("}")
               if (index < docs.size - 1) {
                 append(",")
               }
             }
+            append("]")
           }.toString()
 
           Handler(Looper.getMainLooper()).post {
-            eventSink.forEach { it?.success("[$jsonString]") }
+            eventSink.forEach { it?.success(jsonString) }
           }
         } catch (e: Exception) {
-          Log.e("DittoPlugin", "Error in streamAllTasks observeLocal: ", e)
+          Log.e("DittoPlugin", "Error in streamAllMessages observeLocal: ", e)
           eventSink.forEach { it?.error("ERROR", e.message, null) }
         }
       }
   }
-
 }

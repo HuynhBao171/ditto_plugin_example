@@ -23,65 +23,8 @@ class MethodChannelDittoPlugin extends DittoPluginPlatform {
   }
 
   @override
-  Future<void> save(
-      {String? documentId,
-      required String body,
-      required bool isCompleted}) async {
-    try {
-      await methodChannel.invokeMethod('save', {
-        'documentId': documentId,
-        'body': body,
-        'isCompleted': isCompleted,
-      });
-      print(
-          "Task saved successfully: documentId: $documentId, body: $body, isCompleted: $isCompleted");
-    } on PlatformException catch (e) {
-      print("Error saving task: ${e.message}");
-    }
-  }
-
-  @override
-  Future<bool> delete(String documentId) async {
-    try {
-      await methodChannel.invokeMethod('delete', {'documentId': documentId});
-      print("Task deleted successfully: documentId: $documentId");
-      return true;
-    } on PlatformException catch (e) {
-      print("Error deleting task: ${e.message}");
-      return false;
-    }
-  }
-
-  @override
-  Future<List<dynamic>> getAllTasks() async {
-    try {
-      final result = await methodChannel.invokeMethod('getAllTasks');
-      print("Tasks retrieved successfully: $result");
-      final jsonString = result
-          .replaceAll("{", '{"')
-          .replaceAll("=", '": "')
-          .replaceAll(", ", '", "')
-          .replaceAll("}", '"}')
-          .replaceAll('"_id"', '"id"');
-
-      final List<dynamic> tasksData = jsonDecode(jsonString) as List<dynamic>;
-
-      final List<dynamic> filteredTasks = tasksData.map((task) {
-        final Map<String, dynamic> taskMap = Map<String, dynamic>.from(task);
-        taskMap.remove('isDeleted');
-        return taskMap;
-      }).toList();
-
-      return filteredTasks;
-    } on PlatformException catch (e) {
-      print("Error retrieving tasks: ${e.message}");
-      return [];
-    }
-  }
-
-  @override
-  Stream<List<Map<String, dynamic>>> streamAllTasks() {
-    const EventChannel eventChannel = EventChannel('ditto_plugin/tasks');
+  Stream<List<Map<String, dynamic>>> streamAllMessages() {
+    const EventChannel eventChannel = EventChannel('ditto_plugin/chat');
     print("Stream all tasks");
     return eventChannel.receiveBroadcastStream().map((dynamic event) {
       print("Event: $event");
@@ -92,5 +35,28 @@ class MethodChannelDittoPlugin extends DittoPluginPlatform {
 
       return tasks;
     });
+  }
+
+  @override
+  Future<void> sendMessage(
+      {String? messageId,
+      required String content,
+      required String createdAt,
+      required String senderName}) async {
+    try {
+      await methodChannel.invokeMethod('sendMessage', {
+        'messageId': messageId,
+        'content': content,
+        'createdAt': createdAt,
+        'senderName': senderName,
+      });
+    } on PlatformException catch (e) {
+      print("Failed to send message: ${e.message}");
+    }
+  }
+
+  @override
+  Future<bool> deleteMessage(String messageId) {
+    return DittoPluginPlatform.instance.deleteMessage(messageId);
   }
 }

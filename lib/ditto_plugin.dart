@@ -8,27 +8,29 @@ class DittoPlugin {
     return DittoPluginPlatform.instance.initializeDitto(appId, token);
   }
 
-  Future<void> save(
-      {String? documentId,
-      required String body,
-      required bool isCompleted}) async {
+  Future<void> sendMessage({
+    String? messageId,
+    required String content,
+    required String createdAt,
+    required String senderName,
+  }) async {
     try {
-      await DittoPluginPlatform.instance
-          .save(documentId: documentId, body: body, isCompleted: isCompleted);
+      await DittoPluginPlatform.instance.sendMessage(
+        messageId: messageId,
+        content: content,
+        createdAt: createdAt,
+        senderName: senderName,
+      );
     } on PlatformException catch (e) {
-      print("Failed to save task: ${e.message}");
+      print("Failed to send message: ${e.message}");
     }
   }
 
-  Future<bool> delete(String documentId) {
-    return DittoPluginPlatform.instance.delete(documentId);
+  Future<bool> deleteMessage(String messageId) {
+    return DittoPluginPlatform.instance.deleteMessage(messageId);
   }
 
-  Future<List<dynamic>> getAllTasks() {
-    return DittoPluginPlatform.instance.getAllTasks();
-  }
-
-  Stream<List<dynamic>> streamAllTasks() {
-    return DittoPluginPlatform.instance.streamAllTasks();
+  Stream<List<dynamic>> streamAllMessages() {
+    return DittoPluginPlatform.instance.streamAllMessages();
   }
 }
