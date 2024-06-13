@@ -78,4 +78,19 @@ class MethodChannelDittoPlugin extends DittoPluginPlatform {
       return [];
     }
   }
+
+  @override
+  Stream<List<Map<String, dynamic>>> streamAllTasks() {
+    const EventChannel eventChannel = EventChannel('ditto_plugin/tasks');
+    print("Stream all tasks");
+    return eventChannel.receiveBroadcastStream().map((dynamic event) {
+      print("Event: $event");
+      final jsonData = event.replaceAll('"_id"', '"id"') as String;
+      final List<dynamic> tasksData = jsonDecode(jsonData);
+      final List<Map<String, dynamic>> tasks =
+          tasksData.cast<Map<String, dynamic>>().toList();
+
+      return tasks;
+    });
+  }
 }

@@ -38,4 +38,9 @@ class DittoPluginWeb extends DittoPluginPlatform {
   Future<List<dynamic>> getAllTasks() {
     throw UnimplementedError();
   }
+
+  @override
+  Stream<List> streamAllTasks() {
+    throw UnimplementedError();
+  }
 }

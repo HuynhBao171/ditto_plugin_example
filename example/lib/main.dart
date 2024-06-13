@@ -30,8 +30,8 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _initializeDitto();
-    _requestPermissions();
+    // _initializeDitto();
+    // _requestPermissions();
   }
 
   Future<void> _initializeDitto() async {
@@ -98,8 +98,24 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: HomePage(),
+    return MaterialApp(
+      home: FutureBuilder(
+        future: _initializeDitto(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            if (snapshot.hasError) {
+              // Xử lý lỗi nếu có
+              return Text('Error: ${snapshot.error}');
+            } else {
+              // Hiển thị HomePage khi khởi tạo thành công
+              return const HomePage();
+            }
+          } else {
+            // Hiển thị một widget loading khi đang khởi tạo
+            return const CircularProgressIndicator();
+          }
+        },
+      ),
     );
   }
 }

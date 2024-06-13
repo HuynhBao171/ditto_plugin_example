@@ -8,8 +8,10 @@ class DittoPlugin {
     return DittoPluginPlatform.instance.initializeDitto(appId, token);
   }
 
-   Future<void> save(
-      {String? documentId, required String body, required bool isCompleted}) async {
+  Future<void> save(
+      {String? documentId,
+      required String body,
+      required bool isCompleted}) async {
     try {
       await DittoPluginPlatform.instance
           .save(documentId: documentId, body: body, isCompleted: isCompleted);
@@ -24,5 +26,9 @@ class DittoPlugin {
 
   Future<List<dynamic>> getAllTasks() {
     return DittoPluginPlatform.instance.getAllTasks();
+  }
+
+  Stream<List<dynamic>> streamAllTasks() {
+    return DittoPluginPlatform.instance.streamAllTasks();
   }
 }
