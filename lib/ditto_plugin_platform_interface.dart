@@ -33,14 +33,4 @@ abstract class DittoPluginPlatform extends PlatformInterface {
   Future<List<dynamic>> getAllTasks();
 
   Stream<List<dynamic>> streamAllTasks();
-
-  // Các phương thức cho Live Query
-  Future<void> startLiveQuery(String collectionName, String query);
-  Future<void> stopLiveQuery(String collectionName);
-  Stream<List<dynamic>> liveQueryStream(String collectionName);
-
-  // // Các phương thức cho Bluetooth
-  // Future<void> startBluetoothDataTransfer(String deviceId);
-  // Future<void> stopBluetoothDataTransfer();
-  // Stream<dynamic> bluetoothDataStream();
 }

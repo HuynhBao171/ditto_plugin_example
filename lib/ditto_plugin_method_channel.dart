@@ -80,72 +80,17 @@ class MethodChannelDittoPlugin extends DittoPluginPlatform {
   }
 
   @override
-  Stream<List<dynamic>> streamAllTasks() {
+  Stream<List<Map<String, dynamic>>> streamAllTasks() {
     const EventChannel eventChannel = EventChannel('ditto_plugin/tasks');
-
+    print("Stream all tasks");
     return eventChannel.receiveBroadcastStream().map((dynamic event) {
-      // Xử lý dữ liệu JSON từ event
-      final jsonString = event
-          .replaceAll("{", '{"')
-          .replaceAll("=", '": "')
-          .replaceAll(", ", '", "')
-          .replaceAll("}", '"}')
-          .replaceAll('"_id"', '"id"');
+      print("Event: $event");
+      final jsonData = event.replaceAll('"_id"', '"id"') as String;
+      final List<dynamic> tasksData = jsonDecode(jsonData);
+      final List<Map<String, dynamic>> tasks =
+          tasksData.cast<Map<String, dynamic>>().toList();
 
-      final List<dynamic> tasksData = jsonDecode(jsonString) as List<dynamic>;
-
-      final List<dynamic> filteredTasks = tasksData.map((task) {
-        final Map<String, dynamic> taskMap = Map<String, dynamic>.from(task);
-        taskMap.remove('isDeleted');
-        return taskMap;
-      }).toList();
-
-      return filteredTasks;
-    });
-  }
-
-  @override
-  Future<void> startLiveQuery(String collectionName, String query) async {
-    try {
-      await methodChannel.invokeMethod(
-          'startLiveQuery', {'collectionName': collectionName, 'query': query});
-    } on PlatformException catch (e) {
-      print("Error starting live query: ${e.message}");
-    }
-  }
-
-  @override
-  Future<void> stopLiveQuery(String collectionName) async {
-    try {
-      await methodChannel
-          .invokeMethod('stopLiveQuery', {'collectionName': collectionName});
-    } on PlatformException catch (e) {
-      print("Error stopping live query: ${e.message}");
-    }
-  }
-
-  @override
-  Stream<List<dynamic>> liveQueryStream(String collectionName) {
-    final EventChannel eventChannel =
-        EventChannel('ditto_plugin/live_query/$collectionName');
-    return eventChannel.receiveBroadcastStream().map((dynamic event) {
-      // Xử lý dữ liệu JSON từ event
-      final jsonString = event
-          .replaceAll("{", '{"')
-          .replaceAll("=", '": "')
-          .replaceAll(", ", '", "')
-          .replaceAll("}", '"}')
-          .replaceAll('"_id"', '"id"');
-
-      final List<dynamic> tasksData = jsonDecode(jsonString) as List<dynamic>;
-
-      final List<dynamic> filteredTasks = tasksData.map((task) {
-        final Map<String, dynamic> taskMap = Map<String, dynamic>.from(task);
-        taskMap.remove('isDeleted');
-        return taskMap;
-      }).toList();
-
-      return filteredTasks;
+      return tasks;
     });
   }
 }

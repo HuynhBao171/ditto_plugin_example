@@ -18,61 +18,16 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<Task> tasks = [];
   final _dittoPlugin = DittoPlugin();
-  StreamSubscription<List<dynamic>>? _tasksSubscription;
 
   @override
   void initState() {
     super.initState();
-    _startListeningToTasks();
   }
 
   @override
   void dispose() {
-    _tasksSubscription?.cancel();
     super.dispose();
   }
-
-  void _startListeningToTasks() {
-    _tasksSubscription = _dittoPlugin.streamAllTasks().listen((fetchedTasks) {
-      final mappedTasks = fetchedTasks.map((taskData) {
-        final isCompleted = taskData['isCompleted'] == 'true';
-        return Task.fromJson({
-          ...taskData,
-          'isCompleted': isCompleted,
-        });
-      }).toList();
-
-      setState(() {
-        tasks = mappedTasks;
-      });
-      logger.i("Tasks updated: ${tasks.length} tasks.");
-    }, onError: (error) {
-      logger.e("Error listening to tasks: $error");
-    });
-  }
-
-  // Future<void> _fetchTasks() async {
-  //   try {
-  //     final fetchedTasks = await _dittoPlugin.getAllTasks();
-
-  //     final mappedTasks = fetchedTasks.map((taskData) {
-  //       // Chuyển đổi "true"/"false" thành bool
-  //       final isCompleted = taskData['isCompleted'] == 'true';
-
-  //       return Task.fromJson({
-  //         ...taskData,
-  //         'isCompleted': isCompleted,
-  //       });
-  //     }).toList();
-
-  //     setState(() {
-  //       tasks = mappedTasks;
-  //     });
-  //     logger.i("Tasks fetched successfully: ${tasks.length} tasks.");
-  //   } catch (e) {
-  //     logger.i("Error fetching tasks: $e");
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -99,13 +54,12 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           );
-          // ).then((_) => _fetchTasks());
         },
         label: const Row(
           children: <Widget>[
-            Icon(Icons.add), // Icon
-            SizedBox(width: 2), // Space between icon and text
-            Text("Add new task"), // Text
+            Icon(Icons.add),
+            SizedBox(width: 2),
+            Text("Add new task"),
           ],
         ),
       ),
@@ -118,70 +72,90 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: tasks.length,
-        itemBuilder: (context, index) {
-          final task = tasks[index];
-          return ListTile(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditTaskScreen(
-                    task: task,
-                    onSave: (updatedTask) async {
-                      await _dittoPlugin.save(
-                        documentId: updatedTask.id,
-                        body: updatedTask.body,
-                        isCompleted: updatedTask.isCompleted,
-                      );
-                      logger.i('Task saved in HomePage');
-                    },
-                    onDelete: (taskId) async {
-                      await _dittoPlugin.delete(taskId);
-                      logger.i('Task deleted in HomePage');
+      body: StreamBuilder<List<dynamic>>(
+        stream: _dittoPlugin.streamAllTasks(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            final fetchedTasks = snapshot.data!;
+            tasks = fetchedTasks.map((taskData) {
+              final isCompleted = taskData['isCompleted'] == 'true';
+              return Task.fromJson({
+                ...taskData,
+                'isCompleted': isCompleted,
+              });
+            }).toList();
+
+            return ListView.builder(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditTaskScreen(
+                          task: task,
+                          onSave: (updatedTask) async {
+                            await _dittoPlugin.save(
+                              documentId: updatedTask.id,
+                              body: updatedTask.body,
+                              isCompleted: updatedTask.isCompleted,
+                            );
+                            logger.i('Task saved in HomePage');
+                          },
+                          onDelete: (taskId) async {
+                            await _dittoPlugin.delete(taskId);
+                            logger.i('Task deleted in HomePage');
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  leading: Checkbox(
+                    value: task.isCompleted,
+                    onChanged: (value) async {
+                      if (value != null) {
+                        setState(() {
+                          task.isCompleted = value;
+                        });
+                        // try {
+                        //   await _dittoPlugin.save(
+                        //     documentId: task.id,
+                        //     body: task.body,
+                        //     isCompleted: value,
+                        //   );
+                        // } catch (e) {
+                        //   logger.e("Error saving task: $e");
+
+                        //   setState(() {
+                        //     task.isCompleted = !value;
+                        //   });
+
+                        //   ScaffoldMessenger.of(context).showSnackBar(
+                        //     const SnackBar(content: Text("Error saving task")),
+                        //   );
+                        // }
+                      }
                     },
                   ),
-                ),
-              );
-              // ).then((_) => _fetchTasks());
-            },
-            leading: Checkbox(
-              value: task.isCompleted,
-              onChanged: (value) async {
-                if (value != null) {
-                  setState(() {
-                    task.isCompleted = value;
-                  });
-                  try {
-                    await _dittoPlugin.save(
-                      documentId: task.id,
-                      body: task.body,
-                      isCompleted: value,
-                    );
-                  } catch (e) {
-                    logger.e("Error saving task: $e");
-
-                    setState(() {
-                      task.isCompleted = !value;
-                    });
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Error saving task")),
-                    );
-                  }
-                }
+                  title: Text(
+                    task.body,
+                    style: TextStyle(
+                      decoration: task.isCompleted
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                    ),
+                  ),
+                );
               },
-            ),
-            title: Text(
-              task.body,
-              style: TextStyle(
-                decoration: task.isCompleted
-                    ? TextDecoration.lineThrough
-                    : TextDecoration.none,
-              ),
-            ),
-          );
+            );
+          } else if (snapshot.hasError) {
+            logger.e("Error listening to tasks: ${snapshot.error}");
+            return const Center(child: Text("Error loading tasks"));
+          } else {
+            return const Center(child: CircularProgressIndicator());
+          }
         },
       ),
     );
