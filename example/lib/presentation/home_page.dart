@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:ditto_plugin/ditto_plugin.dart';
@@ -17,21 +18,24 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<Task> tasks = [];
   final _dittoPlugin = DittoPlugin();
+  StreamSubscription<List<dynamic>>? _tasksSubscription;
 
   @override
   void initState() {
     super.initState();
-    _fetchTasks();
+    _startListeningToTasks();
   }
 
-  Future<void> _fetchTasks() async {
-    try {
-      final fetchedTasks = await _dittoPlugin.getAllTasks();
+  @override
+  void dispose() {
+    _tasksSubscription?.cancel();
+    super.dispose();
+  }
 
+  void _startListeningToTasks() {
+    _tasksSubscription = _dittoPlugin.streamAllTasks().listen((fetchedTasks) {
       final mappedTasks = fetchedTasks.map((taskData) {
-        // Chuyển đổi "true"/"false" thành bool
         final isCompleted = taskData['isCompleted'] == 'true';
-
         return Task.fromJson({
           ...taskData,
           'isCompleted': isCompleted,
@@ -41,11 +45,34 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         tasks = mappedTasks;
       });
-      logger.i("Tasks fetched successfully: ${tasks.length} tasks.");
-    } catch (e) {
-      logger.i("Error fetching tasks: $e");
-    }
+      logger.i("Tasks updated: ${tasks.length} tasks.");
+    }, onError: (error) {
+      logger.e("Error listening to tasks: $error");
+    });
   }
+
+  // Future<void> _fetchTasks() async {
+  //   try {
+  //     final fetchedTasks = await _dittoPlugin.getAllTasks();
+
+  //     final mappedTasks = fetchedTasks.map((taskData) {
+  //       // Chuyển đổi "true"/"false" thành bool
+  //       final isCompleted = taskData['isCompleted'] == 'true';
+
+  //       return Task.fromJson({
+  //         ...taskData,
+  //         'isCompleted': isCompleted,
+  //       });
+  //     }).toList();
+
+  //     setState(() {
+  //       tasks = mappedTasks;
+  //     });
+  //     logger.i("Tasks fetched successfully: ${tasks.length} tasks.");
+  //   } catch (e) {
+  //     logger.i("Error fetching tasks: $e");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +98,8 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
             ),
-          ).then((_) => _fetchTasks());
+          );
+          // ).then((_) => _fetchTasks());
         },
         label: const Row(
           children: <Widget>[
@@ -115,7 +143,8 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                 ),
-              ).then((_) => _fetchTasks());
+              );
+              // ).then((_) => _fetchTasks());
             },
             leading: Checkbox(
               value: task.isCompleted,

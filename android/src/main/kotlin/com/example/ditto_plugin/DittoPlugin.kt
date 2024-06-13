@@ -2,6 +2,7 @@ package com.example.ditto_plugin
 
 import com.example.ditto_plugin.data.Task
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -16,11 +17,25 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
   private lateinit var ditto: Ditto
   private lateinit var binding: FlutterPlugin.FlutterPluginBinding
   private lateinit var tasksSubscription: DittoSubscription
+  private val eventSink = mutableListOf<EventChannel.EventSink?>()
 
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "ditto_plugin")
     channel.setMethodCallHandler(this)
     binding = flutterPluginBinding
+    val eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "ditto_plugin/tasks")
+    eventChannel.setStreamHandler(
+      object : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
+          eventSink.add(events)
+        }
+
+        override fun onCancel(arguments: Any?) {
+          eventSink.forEach { it?.endOfStream() }
+          eventSink.clear()
+        }
+      }
+    )
   }
 
   override fun onMethodCall( call: MethodCall, result: Result) {
@@ -29,6 +44,7 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
       "save" -> save(call)
       "delete" -> delete(call, result)
       "getAllTasks" -> getAllTasks(result)
+      "streamAllTasks" -> streamAllTasks()
       else -> result.notImplemented()
     }
   }
@@ -103,22 +119,37 @@ class DittoPlugin: FlutterPlugin, MethodCallHandler {
     val tasksCollection = ditto.store["tasks"]
     ditto.sync.registerSubscription("SELECT * FROM tasks")
 
-    var hasReplied = false
+    tasksCollection
+      .find("!isDeleted")
+      .sort("createdOn", DittoSortDirection.Ascending)
+      .observeLocal { docs, _ ->
+        val jsonString = docs.joinToString(separator = ",") { document ->
+          document.value.toString()
+        }
+        result.success("[$jsonString]")
+      }
+
+//    tasksSubscription = tasksCollection.findAll().subscribe()
+//    tasksSubscription = tasksCollection.find("body == 'A31 2h09'").subscribe()
+  }
+
+  private fun streamAllTasks() {
+    val tasksCollection = ditto.store["tasks"]
+    ditto.sync.registerSubscription("SELECT * FROM tasks")
 
     tasksCollection
       .find("!isDeleted")
       .sort("createdOn", DittoSortDirection.Ascending)
       .observeLocal { docs, _ ->
-        if (!hasReplied) {
+        try {
           val jsonString = docs.joinToString(separator = ",") { document ->
             document.value.toString()
           }
-          result.success("[$jsonString]")
-          hasReplied = true
+          eventSink.forEach { it?.success("[$jsonString]") }
+        } catch (e: Exception) {
+          eventSink.forEach { it?.error("ERROR", e.message, null) }
         }
       }
-//    tasksSubscription = tasksCollection.findAll().subscribe()
-//    tasksSubscription = tasksCollection.find("body == 'A31 2h09'").subscribe()
   }
 
 }

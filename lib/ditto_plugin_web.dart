@@ -38,4 +38,24 @@ class DittoPluginWeb extends DittoPluginPlatform {
   Future<List<dynamic>> getAllTasks() {
     throw UnimplementedError();
   }
+
+  @override
+  Stream<List> liveQueryStream(String collectionName) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> startLiveQuery(String collectionName, String query) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> stopLiveQuery(String collectionName) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<List> streamAllTasks() {
+    throw UnimplementedError();
+  }
 }

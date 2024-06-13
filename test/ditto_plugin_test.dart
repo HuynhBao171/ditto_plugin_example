@@ -40,6 +40,30 @@ class MockDittoPluginPlatform
     // TODO: implement save
     throw UnimplementedError();
   }
+
+  @override
+  Stream<List> liveQueryStream(String collectionName) {
+    // TODO: implement liveQueryStream
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> startLiveQuery(String collectionName, String query) {
+    // TODO: implement startLiveQuery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> stopLiveQuery(String collectionName) {
+    // TODO: implement stopLiveQuery
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<List> streamAllTasks() {
+    // TODO: implement streamAllTasks
+    throw UnimplementedError();
+  }
 }
 
 void main() {
