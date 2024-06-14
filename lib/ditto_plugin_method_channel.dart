@@ -56,7 +56,14 @@ class MethodChannelDittoPlugin extends DittoPluginPlatform {
   }
 
   @override
-  Future<bool> deleteMessage(String messageId) {
-    return DittoPluginPlatform.instance.deleteMessage(messageId);
+  Future<bool> deleteMessage(String messageId) async {
+    try {
+      await methodChannel
+          .invokeMethod('deleteMessage', {'messageId': messageId});
+      return true;
+    } on PlatformException catch (e) {
+      print("Failed to delete message: ${e.message}");
+      return false;
+    }
   }
 }
