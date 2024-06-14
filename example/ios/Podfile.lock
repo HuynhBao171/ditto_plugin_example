@@ -1,0 +1,51 @@
+PODS:
+  - device_info_plus (0.0.1):
+    - Flutter
+  - ditto_plugin (0.0.1):
+    - DittoSwift
+    - Flutter
+  - DittoObjC (4.7.1)
+  - DittoSwift (4.7.1):
+    - DittoObjC (= 4.7.1)
+  - Flutter (1.0.0)
+  - integration_test (0.0.1):
+    - Flutter
+  - permission_handler_apple (9.3.0):
+    - Flutter
+
+DEPENDENCIES:
+  - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
+  - ditto_plugin (from `.symlinks/plugins/ditto_plugin/ios`)
+  - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+
+SPEC REPOS:
+  trunk:
+    - DittoObjC
+    - DittoSwift
+
+EXTERNAL SOURCES:
+  device_info_plus:
+    :path: ".symlinks/plugins/device_info_plus/ios"
+  ditto_plugin:
+    :path: ".symlinks/plugins/ditto_plugin/ios"
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
+
+SPEC CHECKSUMS:
+  device_info_plus: 97af1d7e84681a90d0693e63169a5d50e0839a0d
+  ditto_plugin: cb0720fa1cbfc644562dc169d7ae3ed3778ac632
+  DittoObjC: bfbd32b2af98c419459cb840d89571081ef4f251
+  DittoSwift: 6915856ba77928bcf352e3b40b0230d7f36adc4d
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  integration_test: ce0a3ffa1de96d1a89ca0ac26fca7ea18a749ef4
+  permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
+
+PODFILE CHECKSUM: 9c46fd01abff66081b39f5fa5767b3f1d0b11d76
+
+COCOAPODS: 1.15.2
